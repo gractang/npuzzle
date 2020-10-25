@@ -110,7 +110,6 @@ def ComputeNeighbors(state):
 
 	return pairs
 
-
 def BFS(state):
 	frontier = [(None, tuple(state))]
 	discovered = set((None, tuple(state)))
@@ -142,10 +141,44 @@ def BFS(state):
 				# (move, parent)
 				parents[neighbor[1]] = current_state
 
+def DFS(state):
+	frontier = [(None, tuple(state))]
+	discovered = set((None, tuple(state)))
+	parents = {tuple(state): None}
+	while frontier:
+		current_state = frontier.pop(-1)
+		discovered.add(tuple(current_state))
+		if IsGoal(current_state):
+			temp = current_state
+			moves = []
+			key = temp[1]
+
+			# while move to get to it is not none
+			while temp[0]:
+				moves.append(temp[0])
+				temp = parents[key]
+				key = temp[1]
+
+			# reverse to get correct order
+			return moves[::-1]
+
+		for neighbor in ComputeNeighbors(current_state[1]):
+			if neighbor[1] not in discovered:
+				frontier.insert(0, neighbor)
+				discovered.add(neighbor[1])
+
+				# map parent
+				# builds parents such that the state is mapped to
+				# (move, parent)
+				parents[neighbor[1]] = current_state
+
 
 
 
 print(BFS(board))
+bfs_time = time.time()
+print(DFS(board))
 
-end = time.time()
-print(f"Runtime of the program is {end - start}")
+dfs_time = time.time()
+print(f"Runtime of bfs is {bfs_time - start}")
+print(f"Runtime of dfs is {dfs_time - bfs_time}")
