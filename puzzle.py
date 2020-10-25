@@ -1,5 +1,6 @@
 import sys
 import math
+import time
 
 def DebugPrint(state):
 	n = int(math.sqrt(len(state)))
@@ -26,21 +27,21 @@ def LoadFromFile(file_path):
 		board.extend(int_row)
 	return board
 
-def Build_Positions(state):
-	n = len(state)
+# this is disgusting but i'm too smooth brain to fix it
+def BuildPositions(n):
 	adjacency_dict = {}
 	for index in range(n*n):	# for each index
 		adjacents = []			# build list of adjacent indexes
 		if index == 0: 			# upper left special case
-			adjacents.append(1)
-			adjacents.append(3)
+			adjacents.append(index + 1)
+			adjacents.append(n)
 		elif index == n - 1: 		# upper right special case
 			adjacents.append(n - 2)
 			adjacents.append(2 * n - 1)
 		elif index == n * n - n:	# lower left special case
 			adjacents.append(n * n - 2 * n)
 			adjacents.append(n * n - n + 1)
-		elif index = n * n - 1:		# lower right special case
+		elif index == n * n - 1:		# lower right special case
 			adjacents.append(n * n - 1 - n)
 			adjacents.append(n * n - 2)
 		else:
@@ -61,9 +62,10 @@ def Build_Positions(state):
 	return adjacency_dict
 
 
-
-
 def IsGoal(state):
+	state = list(state)
+	print(state)
+
 	for i in range(len(state)):
 		if i == 0:
 			continue
@@ -71,40 +73,80 @@ def IsGoal(state):
 			return False
 	return True
 
-def find_neighbors_of_hole(state):
-	n = int(sqrt(len(state)))
+def Swap(i, j, arr):
+	a = arr[:]
+	a[i] = arr[j]
+	a[j] = arr[i]
+	return a
+
+start = time.time()
+file_path = sys.argv[1]
+print(file_path)
+board = LoadFromFile(file_path)
+#print(board)
+DebugPrint(board)
+#print(IsGoal(board))
+# print(BuildPositions(3))
+
+# wack variable name so that autograder hopefully doesn't die
+gracs_cool_dictionary = BuildPositions(int(math.sqrt(len(board))))
+# print(gracs_cool_dictionary)
+
+
+# this should work?
+def ComputeNeighbors(state):
+	n = int(math.sqrt(len(state)))
 	index = -1
 	for i in range(len(state)):
 		if state[i] == n*n:
 			index = i
 			break
+	pos = BuildPositions(n)
+	adjacents = pos[index]
 
+	pairs = []
 
-def ComputeNeighbors(state):
+	for adj in adjacents:
+		num = state[adj]
+		neighbor_state = Swap(index, adj, list(state))
+		pairs.append((num, tuple(neighbor_state)))
 
-	return []
+	return pairs
+
 
 def BFS(state):
-	frontier = [state]
+	frontier = [tuple(state)]
 	discovered = set(state)
-	parents = {state: None}
+	parents = {tuple(state): None}
 	while frontier:
 		current_state = frontier.pop(0)
-		discovered.add(current_state)
-	if IsGoal(current_state):
-		# return the path you need by backtracking in parents
+		discovered.add(tuple(current_state))
+		if IsGoal(current_state):
+			temp = current_state
+			moves = []
+			print(parents)
+			while parents[temp]:
+				parent = parents[temp]
+				moves.append(parent[0])
+				# print(parent[0])
+				# print(parent[1])
+				temp = parent[1]
+			return moves[::-1]
+			# return the path you need by backtracking in parents
+
 		for neighbor in ComputeNeighbors(current_state):
+			# print(neighbor)
+			# print("neighbor: " + str(type(neighbor)))
 			if neighbor not in discovered:
-				frontier.append(neighbor)
-				discovered.add(neighbor)
+				frontier.append(neighbor[1])
+				discovered.add(neighbor[1])
+
 				# add neighbor: current_state to the parents map
+				parents[neighbor] = current_state
 
-if __name__ == '__main__':
-	file_path = sys.argv[1]
-	print(file_path)
-	board = read_data(file_path)
-	print(board)
-	DebugPrint(board)
-	print(IsGoal(board))
-	print(IsGoal([7,8,2,1,4,3,5,0,6]))
+# print(ComputeNeighbors(board))
+# print(ComputeNeighbors([7,8,2,1,4,3,5,9,6]))
+print(BFS(board))
 
+end = time.time()
+print(f"Runtime of the program is {end - start}")
