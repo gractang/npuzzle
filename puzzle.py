@@ -2,13 +2,6 @@ import sys
 import math
 import time
 
-def DebugPrint(state):
-	n = int(math.sqrt(len(state)))
-	for row in range(n):
-		for col in range(n):
-			print(str(state[row*n+col]) + ' ', end='')
-		print()
-
 def LoadFromFile(file_path):
 	file = open(file_path, "r")
 	n = int(file.readline())
@@ -63,8 +56,10 @@ def BuildPositions(n):
 
 
 def IsGoal(state):
-	state = list(state)
-	print(state)
+
+	# current state passed in includes how to get there
+	state = list(state[1])
+	# print(state)
 
 	for i in range(len(state)):
 		if i == 0:
@@ -81,28 +76,30 @@ def Swap(i, j, arr):
 
 start = time.time()
 file_path = sys.argv[1]
-print(file_path)
 board = LoadFromFile(file_path)
-#print(board)
-DebugPrint(board)
-#print(IsGoal(board))
-# print(BuildPositions(3))
+
+# a not wack variable name— sorry if autograder dies because i
+# couldn't be bothered to name n something else
+n = int(math.sqrt(len(board)))
 
 # wack variable name so that autograder hopefully doesn't die
-gracs_cool_dictionary = BuildPositions(int(math.sqrt(len(board))))
-# print(gracs_cool_dictionary)
+gracs_cool_dictionary = BuildPositions(n)
 
+def DebugPrint(state):
+	for row in range(n):
+		for col in range(n):
+			print(str(state[row*n+col]) + ' ', end='')
+		print()
 
 # this should work?
 def ComputeNeighbors(state):
-	n = int(math.sqrt(len(state)))
 	index = -1
 	for i in range(len(state)):
 		if state[i] == n*n:
 			index = i
 			break
-	pos = BuildPositions(n)
-	adjacents = pos[index]
+
+	adjacents = gracs_cool_dictionary[index]
 
 	pairs = []
 
@@ -115,8 +112,8 @@ def ComputeNeighbors(state):
 
 
 def BFS(state):
-	frontier = [tuple(state)]
-	discovered = set(state)
+	frontier = [(None, tuple(state))]
+	discovered = set((None, tuple(state)))
 	parents = {tuple(state): None}
 	while frontier:
 		current_state = frontier.pop(0)
@@ -124,28 +121,30 @@ def BFS(state):
 		if IsGoal(current_state):
 			temp = current_state
 			moves = []
-			print(parents)
-			while parents[temp]:
-				parent = parents[temp]
-				moves.append(parent[0])
-				# print(parent[0])
-				# print(parent[1])
-				temp = parent[1]
-			return moves[::-1]
-			# return the path you need by backtracking in parents
+			key = temp[1]
 
-		for neighbor in ComputeNeighbors(current_state):
-			# print(neighbor)
-			# print("neighbor: " + str(type(neighbor)))
-			if neighbor not in discovered:
-				frontier.append(neighbor[1])
+			# while move to get to it is not none
+			while temp[0]:
+				moves.append(temp[0])
+				temp = parents[key]
+				key = temp[1]
+
+			# reverse to get correct order
+			return moves[::-1]
+
+		for neighbor in ComputeNeighbors(current_state[1]):
+			if neighbor[1] not in discovered:
+				frontier.append(neighbor)
 				discovered.add(neighbor[1])
 
-				# add neighbor: current_state to the parents map
-				parents[neighbor] = current_state
+				# map parent
+				# builds parents such that the state is mapped to
+				# (move, parent)
+				parents[neighbor[1]] = current_state
 
-# print(ComputeNeighbors(board))
-# print(ComputeNeighbors([7,8,2,1,4,3,5,9,6]))
+
+
+
 print(BFS(board))
 
 end = time.time()
