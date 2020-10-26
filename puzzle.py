@@ -55,25 +55,6 @@ def BuildPositions(n):
 	return adjacency_dict
 
 
-def IsGoal(state):
-
-	# current state passed in includes how to get there
-	state = list(state[1])
-	# print(state)
-
-	for i in range(len(state)):
-		if i == 0:
-			continue
-		if state[i] < state[i-1]:
-			return False
-	return True
-
-def Swap(i, j, arr):
-	a = arr[:]
-	a[i] = arr[j]
-	a[j] = arr[i]
-	return a
-
 start = time.time()
 file_path = sys.argv[1]
 board = LoadFromFile(file_path)
@@ -84,6 +65,32 @@ n = int(math.sqrt(len(board)))
 
 # wack variable name so that autograder hopefully doesn't die
 gracs_cool_dictionary = BuildPositions(n)
+
+def MakeGoalState():
+	return tuple([i + 1 for i in range(n*n)])
+
+goal = MakeGoalState()
+#    goal = (7, 6, 2, 3, 9, 5, 4, 1, 8)
+
+
+def IsGoal(state):
+	return state[1] == goal
+	# current state passed in includes how to get there
+	# state = list(state[1])
+	# # print(state)
+
+	# for i in range(len(state)):
+	# 	if i == 0:
+	# 		continue
+	# 	if state[i] < state[i-1]:
+	# 		return False
+	# return True
+
+def Swap(i, j, arr):
+	a = arr[:]
+	a[i] = arr[j]
+	a[j] = arr[i]
+	return a
 
 def DebugPrint(state):
 	for row in range(n):
@@ -110,14 +117,20 @@ def ComputeNeighbors(state):
 
 	return pairs
 
+# i am going to be completely real with you i have no idea
+# why or how this works. i made multiple mistakes that might have
+# cancelled each other out. but afaik it works so god knows i'm not
+# changing it. what am i, a masochist?
 def BFS(state):
 	frontier = [(None, tuple(state))]
-	discovered = set((None, tuple(state)))
+	discovered = set(tuple(state))
 	parents = {tuple(state): None}
 	while frontier:
 		current_state = frontier.pop(0)
 		discovered.add(tuple(current_state))
 		if IsGoal(current_state):
+			# print(parents)
+			# print(discovered)
 			temp = current_state
 			moves = []
 			key = temp[1]
@@ -143,7 +156,7 @@ def BFS(state):
 
 def DFS(state):
 	frontier = [(None, tuple(state))]
-	discovered = set((None, tuple(state)))
+	discovered = set(tuple(state))
 	parents = {tuple(state): None}
 	while frontier:
 		current_state = frontier.pop(-1)
@@ -172,13 +185,82 @@ def DFS(state):
 				# (move, parent)
 				parents[neighbor[1]] = current_state
 
+# where end is the reached state, -1 direction means going from 
+# reached state to start (a), 1 means from reached state to end (b)
+def TraceBack(end, parents, direction):
+	moves = []
+	current = end
 
+	# parent state including how to get to current state
+	prev_i = parents[current]
+
+	while prev_i:
+		#print(prev_i)
+		# add move that got you there
+		moves.append(prev_i[0])
+
+		# set new current to previous state (not incl move to get there)
+		current = prev_i[1]
+
+		prev_i = parents[current]
+
+	return moves[::direction]
+
+
+# state now normal (just the n^2 numbers)
+def BidirectionalSearch(state):
+	frontier_a = [(None, tuple(state))]
+	discovered_a = set()
+	discovered_a.add(tuple(state))
+	parents_a = {tuple(state): None}
+	frontier_b = [(None, goal)]
+	discovered_b = set(goal)
+	parents_b = {goal: None}
+
+	while frontier_a or frontier_b:
+		current_state_a = frontier_a.pop(0)
+		discovered_a.add(tuple(current_state_a[1]))
+
+		current_state_b = frontier_b.pop(0)
+		discovered_b.add(tuple(current_state_b[1]))
+
+		if discovered_a & discovered_b:
+
+			union_node = discovered_a & discovered_b
+			union_node = [n for n in union_node]
+			# print(union_node[0])
+			# print(discovered_a)
+			# print(parents_a)
+			# print(parents_b)
+
+			moves = TraceBack(union_node[0], parents_a, -1)
+			moves.extend(TraceBack(union_node[0], parents_b, 1))
+
+			return moves
+
+		for neighbor in ComputeNeighbors(current_state_a[1]):
+			if neighbor[1] not in discovered_a:
+				frontier_a.append(neighbor)
+				discovered_a.add(neighbor[1])
+				parents_a[neighbor[1]] = (neighbor[0], current_state_a[1])
+
+		for neighbor in ComputeNeighbors(current_state_b[1]):
+			if neighbor[1] not in discovered_b:
+				frontier_b.append(neighbor)
+				discovered_b.add(neighbor[1])
+				parents_b[neighbor[1]] = (neighbor[0], current_state_b[1])
+
+		
 
 
 print(BFS(board))
 bfs_time = time.time()
-print(DFS(board))
-
-dfs_time = time.time()
 print(f"Runtime of bfs is {bfs_time - start}")
+
+print(DFS(board))
+dfs_time = time.time()
 print(f"Runtime of dfs is {dfs_time - bfs_time}")
+
+print(BidirectionalSearch(board))
+bds_time = time.time()
+print(f"Runtime of bds is {bds_time - dfs_time}")
